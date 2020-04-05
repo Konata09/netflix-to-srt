@@ -3,7 +3,7 @@ import codecs
 import math
 import os
 import re
-
+from stat import *
 
 SUPPORTED_EXTENSIONS = [".xml", ".vtt"]
 
@@ -136,25 +136,31 @@ def xml_to_srt(text):
         s + 1, subs[s]["start_time"], subs[s]["end_time"], subs[s]["content"])
         for s in range(len(subs)))
     return u"\n".join(lines)
-
-
+def convert(fn):    if fn[-4:] in SUPPORTED_EXTENSIONS:
+        with codecs.open(fn, 'rb', "utf-8") as f:
+            text = f.read()
+        with codecs.open("{}.srt".format(fn), 'wb', "utf-8") as f:
+            f.write(to_srt(text, fn[-4:]))
+            print("file created: " + "{}.srt".format(fn))def walk_tree(top_most_path, callback):
+    for f in os.listdir(top_most_path):
+        pathname = os.path.join(top_most_path, f)
+        mode = os.stat(pathname)[ST_MODE]
+        if S_ISDIR(mode):
+            # It"s a directory, recurse into it
+            walk_tree(pathname, callback)
+        elif S_ISREG(mode):
+            # It"s a file, call the callback function
+            callback(pathname)
+        else:
+            # Unknown file type, print a message
+            print("Skipping %s" % pathname)
 def main():
     directory = "."
     help_text = "path to the {} directory (defaults to current directory)"
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", type=str, default=directory,
                         help=help_text.format("input", directory))
-    parser.add_argument("-o", "--output", type=str, default=directory,
-                        help=help_text.format("output", directory))
-    a = parser.parse_args()
-    filenames = [fn for fn in os.listdir(a.input)
-                 if fn[-4:] in SUPPORTED_EXTENSIONS]
-    for fn in filenames:
-        with codecs.open("{}/{}".format(a.input, fn), 'rb', "utf-8") as f:
-            text = f.read()
-        with codecs.open("{}/{}.srt".format(a.output, fn), 'wb', "utf-8") as f:
-            f.write(to_srt(text, fn[-4:]))
-
+    a = parser.parse_args()    walk_tree(a.input, convert)
 
 if __name__ == '__main__':
     main()
